@@ -1,0 +1,14 @@
+[
+    {
+        "id": 1,
+        "name": "Niko Bellic",
+        "Age": 38,
+        "place": "Liberty City"
+    },
+    {
+        "id": 2,
+        "name": "Roman Bellic",
+        "Age": 40,
+        "place": "Liberty City"
+    }
+]
