@@ -6,11 +6,16 @@ const app = express();
 app.use(express.json());
 
 // Create Redis client
-const redisClient = createClient();
+const redisClient = createClient(); // cache
+const publisher = createClient();   // pub
+const subscriber = createClient();  // sub
 
 const connectRedis = async () => {
     try {
         await redisClient.connect();
+        await publisher.connect();
+        await subscriber.connect();
+
         console.log('✅ Connected to Redis');
     } catch (error) {
         console.error('❌ Redis connection failed:', error);
@@ -51,6 +56,15 @@ app.get('/users/:id', cacheMiddleware, async (req, res) => {
     }
 
     console.log('✅ User found, caching result');
+
+    await publisher.publish(
+        "user.events",
+        JSON.stringify({
+            type: "USER_VIEWED",
+            userId: id,
+            at: new Date().toISOString()
+        })
+    );
 
     try {
         await redisClient.set(`user:${id}`, JSON.stringify(user), { EX: 3600 });
@@ -118,8 +132,27 @@ app.get('/users/hash/:id', async (req, res) => {
 // Close Redis connection on shutdown
 process.on('SIGINT', async () => {
     console.log('🔻 Closing Redis connection...');
-    await redisClient.quit();
+    await Promise.all([
+        redisClient.quit(),
+        publisher.quit(),
+        subscriber.quit()
+    ]);
     process.exit();
+});
+
+// 🔔 Redis Pub/Sub Listener
+// This subscriber is meant to listen to events published by OTHER SERVICES
+// (e.g., order-service, user-service, notification-service).
+// In this demo, publisher and subscriber run in the same app,
+// but in real-world microservices they would be in separate services.
+await subscriber.subscribe("user.events", (message) => {
+    console.log("📩 Event received:", message);
+
+    const event = JSON.parse(message);
+
+    if (event.type === "USER_VIEWED") {
+        console.log(`👀 User viewed: ${event.userId}`);
+    }
 });
 
 app.listen(3000, () => console.log('🚀 Server running on port 3000'));

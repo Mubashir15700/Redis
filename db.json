@@ -10,5 +10,11 @@
         "name": "Roman Bellic",
         "Age": 40,
         "place": "Liberty City"
+    },
+    {
+        "id": 3,
+        "name": "Kate",
+        "Age": 35,
+        "place": "Liberty City"
     }
 ]
